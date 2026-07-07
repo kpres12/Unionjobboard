@@ -9,6 +9,9 @@
     "dev:client": "npm run dev --prefix client",
     "dev:python": "cd python-service && source venv/bin/activate && uvicorn main:app --reload --port 8000",
     "dev": "npm run seed && concurrently \"npm run dev:server\" \"npm run dev:python\" \"npm run dev:client\"",
+    "stripe:setup": "bash scripts/setup-stripe-test.sh",
+    "stripe:webhook": "stripe listen --forward-to localhost:3001/api/billing/webhook --print-secret",
+    "stripe:login": "stripe login",
     "docker:up": "docker compose up -d --build",
     "docker:down": "docker compose down",
     "docker:logs": "docker compose logs -f"

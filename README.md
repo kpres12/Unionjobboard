@@ -82,6 +82,51 @@ Copy `python-service/.env.example` to `python-service/.env` and add keys for opt
 
 Without keys, Haymarket still syncs from USFWC, Jobicy, RemoteOK, and Arbeitnow.
 
+## Monetization (listing infrastructure)
+
+Haymarket uses employer-paid listings to fund the platform while keeping job seeker access free.
+
+| Plan | Price | Who it's for |
+|------|-------|----------------|
+| **Community** | Free | Unions, co-ops, nonprofits, public sector, labor orgs — 1 listing per 90 days |
+| **Standard** | $149 | Any employer — 60-day listing |
+| **Featured** | $228 | Top-of-search placement for 7 days + Standard |
+
+Paid plans use **Stripe Checkout**. Configure in `server/.env`:
+
+```bash
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+STRIPE_DEV_AUTO_PAY=true   # local dev: skip Stripe, auto-activate paid listings
+APP_URL=http://localhost:5173
+```
+
+Webhook endpoint: `POST /api/billing/webhook` (register in Stripe dashboard).
+
+### Stripe test mode (local)
+
+```bash
+# 1. Install CLI (macOS)
+brew install stripe/stripe-cli/stripe
+
+# 2. Guided setup
+npm run stripe:setup
+npm run stripe:login
+
+# 3. Add sk_test_... to server/.env (from dashboard.stripe.com/test/apikeys)
+
+# 4. Forward webhooks (separate terminal — copy whsec_... into server/.env)
+npm run stripe:webhook
+
+# 5. Restart API, then verify
+curl http://localhost:3001/api/billing/status
+
+# 6. Post a Standard/Featured job at /post-job
+#    Test card: 4242 4242 4242 4242
+```
+
+Set `STRIPE_DEV_AUTO_PAY=true` only if you want to skip Stripe entirely during local dev.
+
 ### B-Corp review workflow
 
 - User-posted and imported **B-Corp** listings start as `pending`

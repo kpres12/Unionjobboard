@@ -37,6 +37,35 @@ export interface Job {
   sourceUrl?: string | null
   externalId?: string | null
   approvalStatus?: ApprovalStatus
+  listingTier?: ListingTier | null
+  paymentStatus?: PaymentStatus
+  expiresAt?: string | null
+  featuredUntil?: string | null
+  isFeatured?: boolean
+}
+
+export type ListingTier = 'community' | 'standard' | 'featured'
+export type PaymentStatus = 'not_required' | 'waived' | 'pending' | 'paid' | 'failed'
+
+export interface ListingPlan {
+  id: ListingTier
+  name: string
+  priceCents: number
+  priceLabel: string
+  durationDays: number
+  featuredDays: number
+  summary: string
+  details: string
+  eligibleTypes?: string[]
+  quotaDays?: number
+  quotaLimit?: number
+}
+
+export interface ListingQuota {
+  limit: number
+  used: number
+  remaining: number
+  windowDays: number
 }
 
 export type ApplicationStatus = 'pending' | 'reviewed' | 'accepted' | 'rejected'

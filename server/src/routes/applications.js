@@ -51,8 +51,14 @@ router.post('/', authRequired, async (req, res) => {
     return res.status(404).json({ error: 'Job not found' });
   }
 
-  if (job.approval_status && job.approval_status !== 'approved') {
+  const paymentOk = ['paid', 'waived', 'not_required'].includes(job.payment_status || 'not_required');
+  const approved = (job.approval_status || 'approved') === 'approved';
+  if (!paymentOk || !approved) {
     return res.status(400).json({ error: 'This listing is not accepting applications yet' });
+  }
+
+  if (job.expires_at && job.expires_at <= db.prepare("SELECT datetime('now') AS value").get().value) {
+    return res.status(400).json({ error: 'This listing has expired' });
   }
 
   if (job.posted_by === req.user.id) {

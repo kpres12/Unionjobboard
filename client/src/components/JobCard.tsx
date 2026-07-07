@@ -6,8 +6,17 @@ import { formatSalary } from '../utils/formatJob'
 
 export default function JobCard({ job }: { job: Job }) {
   return (
-    <article className="flex flex-col rounded-lg border-2 border-primary/20 bg-card p-6 shadow-sm transition-colors hover:border-primary/50">
+    <article className={`flex flex-col rounded-lg border-2 bg-card p-6 shadow-sm transition-colors ${
+      job.isFeatured ? 'border-amber-400/80 ring-1 ring-amber-300/50' : 'border-primary/20 hover:border-primary/50'
+    }`}>
       <div className="mb-4">
+        <div className="mb-2 flex flex-wrap items-center gap-2">
+          {job.isFeatured && (
+            <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide text-amber-900">
+              Featured
+            </span>
+          )}
+        </div>
         <h3 className="text-xl font-semibold text-primary">
           <Link to={`/jobs/${job.id}`} className="hover:underline">
             {job.title}

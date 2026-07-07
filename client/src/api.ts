@@ -5,7 +5,11 @@ import type {
   ApprovalStatus,
   AuthResponse,
   Job,
+  ListingPlan,
+  ListingQuota,
+  ListingTier,
   OAuthProviders,
+  PaymentStatus,
   PosterDashboard,
   SeekerDashboard,
   User,
@@ -88,8 +92,36 @@ export const api = {
 
   getJob: (id: number) => request<{ job: Job }>(`/jobs/${id}`),
 
-  createJob: (data: Omit<Job, 'id' | 'postedBy' | 'posterName' | 'createdAt' | 'approvalStatus'>) =>
-    request<{ job: Job; message?: string }>('/jobs', { method: 'POST', body: JSON.stringify(data) }),
+  createJob: (
+    data: Omit<
+      Job,
+      | 'id'
+      | 'postedBy'
+      | 'posterName'
+      | 'createdAt'
+      | 'approvalStatus'
+      | 'paymentStatus'
+      | 'listingTier'
+      | 'expiresAt'
+      | 'featuredUntil'
+      | 'isFeatured'
+    > & { listingTier: ListingTier }
+  ) =>
+    request<{ job: Job; message?: string; checkoutUrl?: string }>('/jobs', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  getListingPlans: () =>
+    request<{ plans: ListingPlan[]; stripeEnabled: boolean }>('/billing/plans'),
+
+  getListingQuota: () => request<{ quota: ListingQuota }>('/billing/quota'),
+
+  confirmCheckout: (sessionId: string) =>
+    request<{ jobId: number; paymentStatus: PaymentStatus }>('/billing/confirm', {
+      method: 'POST',
+      body: JSON.stringify({ sessionId }),
+    }),
 
   deleteJob: (id: number) =>
     request<{ success: boolean }>(`/jobs/${id}`, { method: 'DELETE' }),

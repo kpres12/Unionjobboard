@@ -13,6 +13,8 @@ import AdminDashboardPage from './pages/AdminDashboardPage'
 import DashboardPage from './pages/DashboardPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
+import BillingSuccessPage from './pages/BillingSuccessPage'
+import BillingCancelPage from './pages/BillingCancelPage'
 import AuthCallbackPage from './pages/AuthCallbackPage'
 
 export default function App() {
@@ -59,6 +61,22 @@ export default function App() {
               element={
                 <AuthRoute>
                   <AccountPage />
+                </AuthRoute>
+              }
+            />
+            <Route
+              path="/billing/success"
+              element={
+                <AuthRoute>
+                  <BillingSuccessPage />
+                </AuthRoute>
+              }
+            />
+            <Route
+              path="/billing/cancel"
+              element={
+                <AuthRoute>
+                  <BillingCancelPage />
                 </AuthRoute>
               }
             />

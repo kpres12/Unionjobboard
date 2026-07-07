@@ -2,6 +2,17 @@ import { Router } from 'express';
 import db from '../db.js';
 import { authRequired, optionalAuth } from '../middleware/auth.js';
 import { isValidJobType } from '../constants/jobTypes.js';
+import {
+  FEATURED_ORDER_SQL,
+  PUBLIC_LISTING_SQL,
+  activateListing,
+  validateListingRequest,
+} from '../services/listingBilling.js';
+import {
+  createListingCheckout,
+  devAutoPayEnabled,
+  stripeEnabled,
+} from '../services/stripe.js';
 
 const router = Router();
 const PYTHON_SERVICE_URL = process.env.PYTHON_SERVICE_URL || 'http://localhost:8001';
@@ -25,11 +36,31 @@ function formatJob(row) {
     sourceUrl: row.source_url,
     externalId: row.external_id,
     approvalStatus: row.approval_status || 'approved',
+    listingTier: row.listing_tier,
+    paymentStatus: row.payment_status || 'not_required',
+    expiresAt: row.expires_at,
+    featuredUntil: row.featured_until,
+    isFeatured: Boolean(
+      row.featured_until && row.featured_until > new Date().toISOString().slice(0, 19).replace('T', ' ')
+    ),
   };
 }
 
+function isFeaturedActive(row) {
+  if (!row.featured_until) return false;
+  const now = db.prepare("SELECT datetime('now') AS value").get().value;
+  return row.featured_until > now;
+}
+
 function canViewJob(row, user) {
-  if ((row.approval_status || 'approved') === 'approved') return true;
+  const paymentOk = ['paid', 'waived', 'not_required'].includes(row.payment_status || 'not_required');
+  const notExpired =
+    !row.expires_at ||
+    row.expires_at > db.prepare("SELECT datetime('now') AS value").get().value;
+  const approved = (row.approval_status || 'approved') === 'approved';
+  const isLive = approved && paymentOk && notExpired;
+
+  if (isLive) return true;
   if (!user) return false;
 
   const admin = db.prepare('SELECT is_admin FROM users WHERE id = ?').get(user.id);
@@ -68,6 +99,15 @@ function filterJobsLocally(jobs, query, location, type) {
   });
 }
 
+function sortFeaturedFirst(jobs) {
+  return [...jobs].sort((a, b) => {
+    const aFeatured = a.isFeatured ? 0 : 1;
+    const bFeatured = b.isFeatured ? 0 : 1;
+    if (aFeatured !== bFeatured) return aFeatured - bFeatured;
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  });
+}
+
 router.get('/', async (req, res) => {
   const { q, location, type } = req.query;
 
@@ -76,16 +116,23 @@ router.get('/', async (req, res) => {
       `SELECT jobs.*, users.name AS poster_name
        FROM jobs
        JOIN users ON jobs.posted_by = users.id
-       WHERE jobs.approval_status = 'approved' OR jobs.approval_status IS NULL
-       ORDER BY jobs.created_at DESC`
+       WHERE ${PUBLIC_LISTING_SQL}
+       ORDER BY ${FEATURED_ORDER_SQL}`
     )
     .all();
 
-  const jobs = rows.map(formatJob);
-  const ranked = await searchWithPython(jobs, q, location, type);
-  const results = ranked ?? filterJobsLocally(jobs, q, location, type);
+  let jobs = rows.map((row) => ({
+    ...formatJob(row),
+    isFeatured: isFeaturedActive(row),
+  }));
 
-  res.json({ jobs: results });
+  const ranked = await searchWithPython(jobs, q, location, type);
+  jobs = ranked ?? filterJobsLocally(jobs, q, location, type);
+  if (ranked) {
+    jobs = sortFeaturedFirst(jobs);
+  }
+
+  res.json({ jobs });
 });
 
 router.get('/:id', optionalAuth, (req, res) => {
@@ -102,11 +149,21 @@ router.get('/:id', optionalAuth, (req, res) => {
     return res.status(404).json({ error: 'Job not found' });
   }
 
-  res.json({ job: formatJob(row) });
+  res.json({ job: { ...formatJob(row), isFeatured: isFeaturedActive(row) } });
 });
 
-router.post('/', authRequired, (req, res) => {
-  const { title, company, location, type, description, category, salary, contactEmail } = req.body;
+router.post('/', authRequired, async (req, res) => {
+  const {
+    title,
+    company,
+    location,
+    type,
+    description,
+    category,
+    salary,
+    contactEmail,
+    listingTier = 'community',
+  } = req.body;
 
   if (!title || !company || !location || !type || !description || !category || !contactEmail) {
     return res.status(400).json({ error: 'Missing required fields' });
@@ -116,14 +173,25 @@ router.post('/', authRequired, (req, res) => {
     return res.status(400).json({ error: 'Invalid job type' });
   }
 
+  const listing = validateListingRequest({
+    listingTier,
+    jobType: type,
+    userId: req.user.id,
+  });
+
+  if (!listing.ok) {
+    return res.status(400).json({ error: listing.error });
+  }
+
   const approvalStatus = type === 'B-Corp' ? 'pending' : 'approved';
+  const initialPaymentStatus = listing.paymentStatus;
 
   const result = db
     .prepare(
       `INSERT INTO jobs (
         title, company, location, type, description, category, salary,
-        contact_email, posted_by, approval_status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        contact_email, posted_by, approval_status, listing_tier, payment_status
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       title,
@@ -135,9 +203,12 @@ router.post('/', authRequired, (req, res) => {
       salary || null,
       contactEmail,
       req.user.id,
-      approvalStatus
+      approvalStatus,
+      listingTier,
+      initialPaymentStatus
     );
 
+  const jobId = result.lastInsertRowid;
   const row = db
     .prepare(
       `SELECT jobs.*, users.name AS poster_name
@@ -145,14 +216,45 @@ router.post('/', authRequired, (req, res) => {
        JOIN users ON jobs.posted_by = users.id
        WHERE jobs.id = ?`
     )
-    .get(result.lastInsertRowid);
+    .get(jobId);
 
   const response = { job: formatJob(row) };
-  if (approvalStatus === 'pending') {
-    response.message = 'Your B-Corp listing was submitted and is pending admin review.';
+
+  if (listingTier === 'community') {
+    activateListing(jobId, listing.plan, 'waived');
+    response.job = formatJob(db.prepare('SELECT jobs.*, users.name AS poster_name FROM jobs JOIN users ON jobs.posted_by = users.id WHERE jobs.id = ?').get(jobId));
+    if (approvalStatus === 'pending') {
+      response.message = 'Your B-Corp listing was submitted and is pending admin review.';
+    }
+    return res.status(201).json(response);
   }
 
-  res.status(201).json(response);
+  if (devAutoPayEnabled()) {
+    activateListing(jobId, listing.plan, 'paid');
+    response.job = formatJob(db.prepare('SELECT jobs.*, users.name AS poster_name FROM jobs JOIN users ON jobs.posted_by = users.id WHERE jobs.id = ?').get(jobId));
+    if (approvalStatus === 'pending') {
+      response.message = 'Payment recorded (dev mode). Your B-Corp listing is pending admin review.';
+    }
+    return res.status(201).json(response);
+  }
+
+  if (!stripeEnabled()) {
+    db.prepare('DELETE FROM jobs WHERE id = ?').run(jobId);
+    return res.status(503).json({
+      error: 'Paid listings require Stripe. Set STRIPE_SECRET_KEY or use Community plan.',
+    });
+  }
+
+  try {
+    const user = db.prepare('SELECT email FROM users WHERE id = ?').get(req.user.id);
+    const checkoutUrl = await createListingCheckout(row, listing.plan, user.email);
+    response.checkoutUrl = checkoutUrl;
+    response.message = 'Complete payment to publish your listing.';
+    return res.status(201).json(response);
+  } catch (error) {
+    db.prepare('DELETE FROM jobs WHERE id = ?').run(jobId);
+    return res.status(500).json({ error: error.message });
+  }
 });
 
 router.delete('/:id', authRequired, (req, res) => {

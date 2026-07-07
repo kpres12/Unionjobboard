@@ -26,8 +26,9 @@ export function upsertExternalJobs(db, jobs, postedBy) {
   const insert = db.prepare(
     `INSERT INTO jobs (
       title, company, location, type, description, category, salary,
-      contact_email, posted_by, source, source_url, external_id, published_at, approval_status
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      contact_email, posted_by, source, source_url, external_id, published_at,
+      approval_status, payment_status, listing_tier
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'not_required', 'imported')`
   );
 
   const update = db.prepare(

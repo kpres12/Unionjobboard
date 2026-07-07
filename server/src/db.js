@@ -101,6 +101,22 @@ if (!jobColumnNames.includes('approval_status')) {
   db.exec("ALTER TABLE jobs ADD COLUMN approval_status TEXT DEFAULT 'approved'");
   db.exec("UPDATE jobs SET approval_status = 'pending' WHERE type = 'B-Corp'");
 }
+if (!jobColumnNames.includes('listing_tier')) db.exec('ALTER TABLE jobs ADD COLUMN listing_tier TEXT');
+if (!jobColumnNames.includes('payment_status')) {
+  db.exec("ALTER TABLE jobs ADD COLUMN payment_status TEXT DEFAULT 'not_required'");
+}
+if (!jobColumnNames.includes('expires_at')) db.exec('ALTER TABLE jobs ADD COLUMN expires_at TEXT');
+if (!jobColumnNames.includes('featured_until')) db.exec('ALTER TABLE jobs ADD COLUMN featured_until TEXT');
+if (!jobColumnNames.includes('stripe_checkout_session_id')) {
+  db.exec('ALTER TABLE jobs ADD COLUMN stripe_checkout_session_id TEXT');
+}
+
+db.exec(`
+  UPDATE jobs SET payment_status = 'not_required' WHERE external_id IS NOT NULL;
+  UPDATE jobs
+  SET payment_status = 'waived', listing_tier = COALESCE(listing_tier, 'community')
+  WHERE external_id IS NULL AND (payment_status IS NULL OR payment_status = 'not_required');
+`);
 
 db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_jobs_external ON jobs(source, external_id);`);
 
