@@ -1,0 +1,43 @@
+services:
+  python:
+    build: ./python-service
+    restart: unless-stopped
+    env_file:
+      - ./python-service/.env
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  api:
+    build: ./server
+    restart: unless-stopped
+    depends_on:
+      python:
+        condition: service_healthy
+    environment:
+      PORT: 3001
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      PYTHON_SERVICE_URL: http://python:8000
+      DATABASE_PATH: /app/data/jobboard.db
+      CORS_ORIGINS: http://localhost,http://localhost:80
+    volumes:
+      - jobboard-data:/app/data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3001/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  web:
+    build: ./client
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  jobboard-data:
