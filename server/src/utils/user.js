@@ -1,4 +1,6 @@
 export function formatUser(row) {
+  const subscriptionStatus = row.subscription_status || 'inactive';
+  const hasActiveSubscription = ['trialing', 'active', 'past_due'].includes(subscriptionStatus);
   return {
     id: row.id,
     email: row.email,
@@ -7,6 +9,11 @@ export function formatUser(row) {
     authProvider: row.auth_provider || 'local',
     role: row.role || 'seeker',
     createdAt: row.created_at,
+    subscriptionStatus,
+    subscriptionPlanId: row.subscription_plan_id || null,
+    subscriptionCurrentPeriodEnd: row.subscription_current_period_end || null,
+    subscriptionCancelAtPeriodEnd: Boolean(row.subscription_cancel_at_period_end),
+    hasActiveSubscription,
   };
 }
 

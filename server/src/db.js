@@ -78,6 +78,11 @@ const userMigrations = [
   ['google_id', 'ALTER TABLE users ADD COLUMN google_id TEXT'],
   ['apple_id', 'ALTER TABLE users ADD COLUMN apple_id TEXT'],
   ['role', "ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'seeker'"],
+  ['stripe_customer_id', 'ALTER TABLE users ADD COLUMN stripe_customer_id TEXT'],
+  ['subscription_status', "ALTER TABLE users ADD COLUMN subscription_status TEXT DEFAULT 'inactive'"],
+  ['subscription_plan_id', 'ALTER TABLE users ADD COLUMN subscription_plan_id TEXT'],
+  ['subscription_current_period_end', 'ALTER TABLE users ADD COLUMN subscription_current_period_end TEXT'],
+  ['subscription_cancel_at_period_end', 'ALTER TABLE users ADD COLUMN subscription_cancel_at_period_end INTEGER DEFAULT 0'],
 ];
 
 for (const [name, sql] of userMigrations) {
@@ -89,6 +94,7 @@ for (const [name, sql] of userMigrations) {
 db.exec(`
   CREATE UNIQUE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id) WHERE google_id IS NOT NULL;
   CREATE UNIQUE INDEX IF NOT EXISTS idx_users_apple_id ON users(apple_id) WHERE apple_id IS NOT NULL;
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_users_stripe_customer_id ON users(stripe_customer_id) WHERE stripe_customer_id IS NOT NULL;
 `);
 
 const jobColumns = db.prepare('PRAGMA table_info(jobs)').all();

@@ -12,6 +12,7 @@ import type {
   PaymentStatus,
   PosterDashboard,
   SeekerDashboard,
+  SubscriptionStatus,
   User,
   UserRole,
 } from './types'
@@ -121,6 +122,22 @@ export const api = {
     request<{ jobId: number; paymentStatus: PaymentStatus }>('/billing/confirm', {
       method: 'POST',
       body: JSON.stringify({ sessionId }),
+    }),
+
+  getSubscriptionStatus: () =>
+    request<{ subscription: SubscriptionStatus; configuredPlans: Array<{ id: string; priceId: string }> }>(
+      '/billing/subscription'
+    ),
+
+  createSubscriptionCheckout: (planId: 'starter' | 'growth' | 'enterprise') =>
+    request<{ checkoutUrl: string }>('/billing/subscription/checkout', {
+      method: 'POST',
+      body: JSON.stringify({ planId }),
+    }),
+
+  getBillingPortal: () =>
+    request<{ portalUrl: string }>('/billing/subscription/portal', {
+      method: 'POST',
     }),
 
   deleteJob: (id: number) =>

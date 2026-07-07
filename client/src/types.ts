@@ -12,6 +12,19 @@ export interface User {
   role?: UserRole
   createdAt?: string
   applicationCount?: number
+  subscriptionStatus?: 'inactive' | 'trialing' | 'active' | 'past_due' | 'canceled' | 'unpaid'
+  subscriptionPlanId?: string | null
+  subscriptionCurrentPeriodEnd?: string | null
+  subscriptionCancelAtPeriodEnd?: boolean
+  hasActiveSubscription?: boolean
+}
+
+export interface SubscriptionStatus {
+  status: string
+  planId: string | null
+  currentPeriodEnd: string | null
+  cancelAtPeriodEnd: boolean
+  hasActiveSubscription: boolean
 }
 
 export type ApprovalStatus = 'approved' | 'pending' | 'rejected'

@@ -78,18 +78,22 @@ router.get('/graph', (_req, res) => {
     )
     .all();
 
-  const nodes = orgs.map((org, index) => ({
-    id: org.id,
-    slug: org.slug,
-    name: org.name,
-    location: org.location,
-    orgType: org.org_type,
-    intentScore: org.intent_score,
-    activeListings: org.active_listings || 0,
-    ghostRate: org.ghost_rate,
-    cluster: (org.location || 'unknown').split(',')[0].trim().toLowerCase(),
-    index,
-  }));
+  const nodes = orgs.map((org, index) => {
+    const location = org.location || '';
+    const clusterPart = location.split(',')[0].trim().toLowerCase() || 'unknown';
+    return {
+      id: org.id,
+      slug: org.slug,
+      name: org.name,
+      location: org.location,
+      orgType: org.org_type,
+      intentScore: org.intent_score,
+      activeListings: org.active_listings || 0,
+      ghostRate: org.ghost_rate,
+      cluster: clusterPart,
+      index,
+    };
+  });
 
   const edges = [];
   const byCluster = new Map();

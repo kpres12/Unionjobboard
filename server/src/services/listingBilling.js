@@ -21,6 +21,13 @@ export function communityQuotaUsed(userId) {
 }
 
 export function canUseCommunityPlan(userId, jobType) {
+  const subscription = db
+    .prepare('SELECT subscription_status FROM users WHERE id = ?')
+    .get(userId);
+  if (['trialing', 'active', 'past_due'].includes(subscription?.subscription_status || 'inactive')) {
+    return { allowed: true };
+  }
+
   if (!COMMUNITY_ELIGIBLE_TYPES.includes(jobType)) {
     return {
       allowed: false,
