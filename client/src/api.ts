@@ -174,6 +174,57 @@ export const api = {
 
   deleteAdminJob: (id: number) =>
     request<{ success: boolean }>(`/admin/jobs/${id}`, { method: 'DELETE' }),
+
+  getIntelligenceFeed: (params?: { limit?: number; type?: string }) => {
+    const search = new URLSearchParams()
+    if (params?.limit) search.set('limit', String(params.limit))
+    if (params?.type) search.set('type', params.type)
+    const query = search.toString()
+    return request<{ signals: import('./types/intelligence').LaborSignal[] }>(
+      `/intelligence/feed${query ? `?${query}` : ''}`
+    )
+  },
+
+  getHiringIntent: (limit = 25) =>
+    request<{ scores: import('./types/intelligence').HiringIntentScore[] }>(
+      `/intelligence/intent?limit=${limit}`
+    ),
+
+  getLaborGraph: () =>
+    request<import('./types/intelligence').LaborGraph>('/intelligence/graph'),
+
+  getOrganizations: (params?: { q?: string; limit?: number }) => {
+    const search = new URLSearchParams()
+    if (params?.q) search.set('q', params.q)
+    if (params?.limit) search.set('limit', String(params.limit))
+    const query = search.toString()
+    return request<{ organizations: import('./types/intelligence').Organization[] }>(
+      `/organizations${query ? `?${query}` : ''}`
+    )
+  },
+
+  getOrganization: (slug: string) =>
+    request<{
+      organization: import('./types/intelligence').Organization
+      signals: import('./types/intelligence').LaborSignal[]
+      jobs: Array<{
+        id: number
+        title: string
+        location: string
+        type: string
+        category: string
+        salary?: string | null
+        createdAt: string
+        source?: string | null
+        sourceUrl?: string | null
+      }>
+    }>(`/organizations/${slug}`),
+
+  syncIntelligence: () =>
+    request<{ success: boolean; added: number; updated: number; signals: number; organizations: number }>(
+      '/intelligence/sync',
+      { method: 'POST' }
+    ),
 }
 
 export function getAppleSignInUrl(role: UserRole = 'seeker') {

@@ -112,6 +112,71 @@ if (!jobColumnNames.includes('stripe_checkout_session_id')) {
 }
 
 db.exec(`
+  CREATE TABLE IF NOT EXISTS organizations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    slug TEXT UNIQUE NOT NULL,
+    location TEXT,
+    org_type TEXT,
+    domain TEXT,
+    description TEXT,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS labor_signals (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    organization_id INTEGER NOT NULL,
+    signal_type TEXT NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT,
+    source TEXT NOT NULL,
+    source_url TEXT,
+    external_id TEXT,
+    confidence REAL DEFAULT 0.5,
+    score REAL DEFAULT 0,
+    lead_weeks INTEGER DEFAULT 4,
+    occurred_at TEXT,
+    metadata TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
+  );
+
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_labor_signals_external
+    ON labor_signals(source, external_id) WHERE external_id IS NOT NULL;
+
+  CREATE TABLE IF NOT EXISTS hiring_intent_scores (
+    organization_id INTEGER PRIMARY KEY,
+    score REAL NOT NULL DEFAULT 0,
+    lead_weeks INTEGER DEFAULT 4,
+    summary TEXT,
+    computed_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS employer_metrics (
+    organization_id INTEGER PRIMARY KEY,
+    application_count INTEGER DEFAULT 0,
+    pending_applications INTEGER DEFAULT 0,
+    reviewed_rate REAL,
+    accepted_rate REAL,
+    ghost_rate REAL,
+    median_response_days REAL,
+    active_listings INTEGER DEFAULT 0,
+    computed_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_labor_signals_org ON labor_signals(organization_id);
+  CREATE INDEX IF NOT EXISTS idx_labor_signals_occurred ON labor_signals(occurred_at);
+`);
+
+if (!jobColumnNames.includes('organization_id')) {
+  db.exec('ALTER TABLE jobs ADD COLUMN organization_id INTEGER REFERENCES organizations(id)');
+}
+
+db.exec('CREATE INDEX IF NOT EXISTS idx_jobs_organization ON jobs(organization_id)');
+
+db.exec(`
   UPDATE jobs SET payment_status = 'not_required' WHERE external_id IS NOT NULL;
   UPDATE jobs
   SET payment_status = 'waived', listing_tier = COALESCE(listing_tier, 'community')

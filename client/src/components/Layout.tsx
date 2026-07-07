@@ -29,6 +29,11 @@ export default function Layout() {
                 </li>
               )}
               <li>
+                <Link to="/intelligence" className="text-lg hover:underline">
+                  Intelligence
+                </Link>
+              </li>
+              <li>
                 <Link to="/resources" className="text-lg hover:underline">
                   Resources
                 </Link>
@@ -79,6 +84,9 @@ export default function Layout() {
           <div className="mt-6 flex flex-wrap justify-center gap-6">
             <Link to="/about" className="text-muted-foreground hover:text-primary">
               About
+            </Link>
+            <Link to="/intelligence" className="text-muted-foreground hover:text-primary">
+              Intelligence
             </Link>
             <Link to="/resources" className="text-muted-foreground hover:text-primary">
               Resources

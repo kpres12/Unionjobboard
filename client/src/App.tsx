@@ -16,6 +16,9 @@ import ResetPasswordPage from './pages/ResetPasswordPage'
 import BillingSuccessPage from './pages/BillingSuccessPage'
 import BillingCancelPage from './pages/BillingCancelPage'
 import AuthCallbackPage from './pages/AuthCallbackPage'
+import IntelligencePage from './pages/IntelligencePage'
+import EmployerProfilePage from './pages/EmployerProfilePage'
+import LaborGraphPage from './pages/LaborGraphPage'
 
 export default function App() {
   return (
@@ -38,6 +41,9 @@ export default function App() {
             />
             <Route path="/about" element={<AboutPage />} />
             <Route path="/resources" element={<ResourcesPage />} />
+            <Route path="/intelligence" element={<IntelligencePage />} />
+            <Route path="/labor-graph" element={<LaborGraphPage />} />
+            <Route path="/employers/:slug" element={<EmployerProfilePage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route

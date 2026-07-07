@@ -8,6 +8,8 @@ import applicationRoutes from './routes/applications.js';
 import adminRoutes from './routes/admin.js';
 import dashboardRoutes from './routes/dashboard.js';
 import billingRoutes, { billingWebhookHandler } from './routes/billing.js';
+import intelligenceRoutes from './routes/intelligence.js';
+import organizationRoutes from './routes/organizations.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -36,6 +38,8 @@ app.use('/api/applications', applicationRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/billing', billingRoutes);
+app.use('/api/intelligence', intelligenceRoutes);
+app.use('/api/organizations', organizationRoutes);
 
 app.listen(PORT, () => {
   console.log(`API server running on http://localhost:${PORT}`);

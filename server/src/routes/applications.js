@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import db from '../db.js';
 import { authRequired } from '../middleware/auth.js';
+import { computeEmployerMetrics } from '../services/employerMetrics.js';
 
 const router = Router();
 const PYTHON_SERVICE_URL = process.env.PYTHON_SERVICE_URL || 'http://localhost:8001';
@@ -172,6 +173,10 @@ router.patch('/:id', authRequired, (req, res) => {
        WHERE applications.id = ?`
     )
     .get(req.params.id);
+
+  if (job.organization_id) {
+    computeEmployerMetrics(job.organization_id);
+  }
 
   res.json({ application: formatApplication(row) });
 });

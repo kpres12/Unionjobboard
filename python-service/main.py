@@ -129,3 +129,15 @@ def score_application(request: ApplicationScoreRequest):
 @app.get("/fetch-jobs")
 def fetch_jobs():
     return fetch_all_jobs()
+
+
+class IntelligenceContext(BaseModel):
+    organizations: list[dict] = []
+    jobs: list[dict] = []
+
+
+@app.post("/intelligence/ingest")
+def intelligence_ingest(context: IntelligenceContext):
+    from intelligence import ingest_intelligence
+
+    return ingest_intelligence(context.model_dump())

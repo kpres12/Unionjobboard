@@ -6,7 +6,8 @@
     "start": "node src/index.js",
     "dev": "node --watch src/index.js",
     "seed": "node src/seed.js",
-    "sync-jobs": "node src/syncJobs.js"
+    "sync-jobs": "node src/syncJobs.js",
+    "sync-signals": "node src/syncSignals.js"
   },
   "dependencies": {
     "apple-signin-auth": "^2.0.0",

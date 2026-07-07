@@ -13,6 +13,7 @@ import {
   devAutoPayEnabled,
   stripeEnabled,
 } from '../services/stripe.js';
+import { linkJobToOrganization } from '../services/employerMetrics.js';
 
 const router = Router();
 const PYTHON_SERVICE_URL = process.env.PYTHON_SERVICE_URL || 'http://localhost:8001';
@@ -209,6 +210,7 @@ router.post('/', authRequired, async (req, res) => {
     );
 
   const jobId = result.lastInsertRowid;
+  linkJobToOrganization({ id: jobId, company, location, type });
   const row = db
     .prepare(
       `SELECT jobs.*, users.name AS poster_name

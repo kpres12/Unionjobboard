@@ -1,3 +1,5 @@
+import { linkJobToOrganization } from './services/employerMetrics.js';
+
 const PYTHON_SERVICE_URL = process.env.PYTHON_SERVICE_URL || 'http://localhost:8001';
 
 export async function fetchJobsFromSources() {
@@ -61,6 +63,8 @@ export function upsertExternalJobs(db, jobs, postedBy) {
         job.source,
         job.externalId
       );
+      const row = db.prepare('SELECT id, company, location, type FROM jobs WHERE id = ?').get(existing.id);
+      if (row) linkJobToOrganization(row);
       updated += 1;
       continue;
     }
@@ -81,6 +85,18 @@ export function upsertExternalJobs(db, jobs, postedBy) {
       job.publishedAt || null,
       resolveApprovalStatus(job)
     );
+    const newId = db.prepare('SELECT id FROM jobs WHERE source = ? AND external_id = ?').get(
+      job.source,
+      job.externalId
+    );
+    if (newId) {
+      linkJobToOrganization({
+        id: newId.id,
+        company: job.company,
+        location: job.location,
+        type: job.type,
+      });
+    }
     added += 1;
   }
 
